@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "mcp-hub-security": {
+      "command": "python",
+      "args": ["server.py"],
+      "env": {
+        "MCPHUB_API_KEY": "YOUR_API_KEY_HERE",
+        "MCPHUB_MIN_SCORE": "80",
+        "MCPHUB_MAX_RISK": "low",
+        "MCPHUB_DENIED_CAPABILITIES": ""
+      }
+    }
+  }
+}
