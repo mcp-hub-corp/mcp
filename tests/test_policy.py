@@ -160,3 +160,16 @@ def test_skill_critical_allowed_when_max_risk_critical(clean_skill):
     clean_skill["risk_level"] = "critical"
     allowed, _ = apply_skill_policy(clean_skill, cfg)
     assert allowed is True
+
+
+def test_skill_risk_safe_allowed_with_medium_max(default_skill_cfg, clean_skill):
+    # SkillScan API returns "safe" as the best risk level — must not be blocked
+    clean_skill["risk_level"] = "safe"
+    allowed, reasons = apply_skill_policy(clean_skill, default_skill_cfg)
+    assert allowed is True
+    assert reasons == []
+
+
+def test_risk_order_includes_safe():
+    assert RISK_ORDER["safe"] == 0
+    assert RISK_ORDER["safe"] <= RISK_ORDER["none"]

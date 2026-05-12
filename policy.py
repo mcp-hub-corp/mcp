@@ -1,7 +1,7 @@
 from __future__ import annotations
 from config import MCPConfig, SkillConfig
 
-RISK_ORDER: dict[str, int] = {"none": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+RISK_ORDER: dict[str, int] = {"safe": 0, "none": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
 
 
 def apply_mcp_policy(verdict: dict, cfg: MCPConfig) -> tuple[bool, list[str]]:
