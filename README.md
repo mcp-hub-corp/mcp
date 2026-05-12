@@ -12,7 +12,7 @@
 
 ---
 
-**[Tools reference](#available-tools)** · **[Environment variables](#environment-variables)** · **[Skill watchdog](#proactive-skill-watchdog)** · **[Examples](#examples)** · **[Get API key](https://mcp-hub.info/accounts/dashboard/)**
+**[Quick install](#quick-install)** · **[Claude Code setup](#mcp-client-configuration)** · **[How it works](#how-it-works)** · **[Tools reference](#available-tools)** · **[Get API key](https://mcp-hub.info/accounts/dashboard/)**
 
 ---
 
@@ -21,8 +21,8 @@
 - [What is this?](#what-is-this)
 - [Features](#features)
 - [Quick install](#quick-install)
-- [MCP client configuration](#mcp-client-configuration)
-- [Proactive Skill watchdog](#proactive-skill-watchdog)
+- [MCP client configuration](#mcp-client-configuration) — includes watchdog setup for Claude Code
+- [How it works](#how-it-works)
 - [Environment variables](#environment-variables)
 - [Available tools](#available-tools)
 - [Examples](#examples)
@@ -73,25 +73,23 @@ Get your API key at [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/acco
 
 ## MCP client configuration
 
+> **Recommended:** Claude Code is the only client that supports the full setup — MCP server + proactive Skill watchdog hook. Other clients get the security tools but not the automatic scanning on write.
+
 <details>
-<summary><strong>Claude Code</strong></summary>
+<summary><strong>Claude Code ⭐ Full setup with watchdog (recommended)</strong></summary>
 
-**Option A — project-level (recommended)**
+Claude Code supports both the MCP server and the **proactive Skill watchdog hook** — the hook automatically scans any `SKILL.md` you write or edit and blocks unsafe skills before they run.
 
-Copy `.mcp.json` from this repo to your project root, then set your API key:
+**Step 1 — MCP server**
 
-```bash
-cp .mcp.json /your/project/.mcp.json
-```
-
-Edit `/your/project/.mcp.json`:
+Add to `~/.claude/mcp.json` (global) or `.mcp.json` in your project root:
 
 ```json
 {
   "mcpServers": {
     "mcp-hub-security": {
       "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-mcp/server.py"],
+      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
       "env": {
         "MCPHUB_API_KEY": "your_api_key_here",
         "MCPHUB_MIN_SCORE": "80",
@@ -105,11 +103,36 @@ Edit `/your/project/.mcp.json`:
 }
 ```
 
-Run `claude` — the server loads automatically.
+**Step 2 — Skill watchdog hook**
 
-**Option B — global**
+Add to `~/.claude/settings.json` (global) or `.claude/settings.json` (project):
 
-Copy `.mcp.json` to `~/.claude/.mcp.json` to enable the security gate in every project.
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "MCPHUB_API_KEY=your_api_key_here MCPHUB_SKILL_MIN_SCORE=70 MCPHUB_SKILL_MAX_RISK=medium python /absolute/path/to/mcp-hub-security/hooks/skill_watchdog.py"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**How the watchdog works:**
+
+After every `Write` or `Edit` tool call, the hook checks if the file is a Claude Code Skill (frontmatter with `name:` + `description:`). If it is, it scans it immediately and emits a verdict:
+
+- ✅ **Safe** → brief notice with score and risk level, no interruption.
+- 🚫 **Blocked** → error message listing the policy violations. Claude Code stops and shows why.
+
+Run `claude` — both the server and hook are active immediately.
 
 </details>
 
@@ -123,7 +146,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "mcp-hub-security": {
       "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-mcp/server.py"],
+      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
       "env": {
         "MCPHUB_API_KEY": "your_api_key_here",
         "MCPHUB_MIN_SCORE": "80",
@@ -137,7 +160,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 }
 ```
 
-Restart Claude Desktop after saving.
+Restart Claude Desktop after saving. Note: Claude Desktop does not support hooks — the proactive Skill watchdog is not available here.
 
 </details>
 
@@ -152,7 +175,7 @@ Add to `.vscode/mcp.json` in your workspace, or to `~/.vscode/mcp.json` globally
     "mcp-hub-security": {
       "type": "stdio",
       "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-mcp/server.py"],
+      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
       "env": {
         "MCPHUB_API_KEY": "your_api_key_here",
         "MCPHUB_MIN_SCORE": "80",
@@ -164,6 +187,8 @@ Add to `.vscode/mcp.json` in your workspace, or to `~/.vscode/mcp.json` globally
   }
 }
 ```
+
+Note: VS Code does not support Claude Code hooks — the proactive Skill watchdog is not available here.
 
 </details>
 
@@ -177,7 +202,7 @@ Add to `~/.cursor/mcp.json`:
   "mcpServers": {
     "mcp-hub-security": {
       "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-mcp/server.py"],
+      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
       "env": {
         "MCPHUB_API_KEY": "your_api_key_here",
         "MCPHUB_MIN_SCORE": "80",
@@ -204,7 +229,7 @@ Add to `~/.windsurf/mcp.json`:
   "mcpServers": {
     "mcp-hub-security": {
       "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-mcp/server.py"],
+      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
       "env": {
         "MCPHUB_API_KEY": "your_api_key_here",
         "MCPHUB_MIN_SCORE": "80",
@@ -230,7 +255,7 @@ Add to `~/.config/zed/settings.json` under the `"context_servers"` key:
     "mcp-hub-security": {
       "command": {
         "path": "python",
-        "args": ["/absolute/path/to/mcp-hub-mcp/server.py"],
+        "args": ["/absolute/path/to/mcp-hub-security/server.py"],
         "env": {
           "MCPHUB_API_KEY": "your_api_key_here",
           "MCPHUB_MIN_SCORE": "80",
@@ -255,7 +280,7 @@ Add to `.continue/config.json`:
     {
       "name": "mcp-hub-security",
       "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-mcp/server.py"],
+      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
       "env": {
         "MCPHUB_API_KEY": "your_api_key_here",
         "MCPHUB_MIN_SCORE": "80",
@@ -267,43 +292,6 @@ Add to `.continue/config.json`:
 ```
 
 </details>
-
----
-
-## Proactive Skill watchdog
-
-The skill watchdog is a Claude Code hook that **automatically scans any `SKILL.md` you create or edit** and warns you before you use it.
-
-### How it works
-
-After every `Write` or `Edit` tool call, the hook checks whether the file looks like a Claude Code Skill (frontmatter with `name:` + `description:`). If it does, it calls `POST /api/v1/skill-scan/` inline and emits a verdict.
-
-- **Safe** → short notice with score and risk level, no interruption.
-- **Blocked** → warning message listing the policy violations. The hook exits with code 1 to stop execution.
-
-### Install
-
-Add to `~/.claude/settings.json` (global) or `.claude/settings.json` (project):
-
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python /absolute/path/to/mcp-hub-mcp/hooks/skill_watchdog.py"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
-
-Set the same `MCPHUB_API_KEY`, `MCPHUB_SKILL_MIN_SCORE`, and `MCPHUB_SKILL_MAX_RISK` env vars in your shell profile so the watchdog can read them.
 
 ---
 
