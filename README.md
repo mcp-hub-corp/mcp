@@ -332,6 +332,54 @@ Set the same `MCPHUB_API_KEY`, `MCPHUB_SKILL_MIN_SCORE`, and `MCPHUB_SKILL_MAX_R
 
 ---
 
+## How it works
+
+### MCP server scan pipeline
+
+`check_mcp_safety(url)` runs four steps automatically:
+
+```
+1. POST /scans/          →  submit repo URL, receive check_token
+2. GET  /scans/checking/{token}/  (poll every 2 s, up to 5 min)
+3. GET  /scans/{id}/verdict/      →  score, risk, capabilities, findings
+4. Policy engine         →  evaluate against your env vars → allowed: true/false
+```
+
+Cached results (same repo + same commit SHA) skip steps 1–3 and cost **0 credits**.
+
+### Skill scan pipeline
+
+`check_skill_safety` and `check_skill_safety_url` are **synchronous** — no polling needed. The API analyses the SKILL.md content immediately and returns the result in a single request.
+
+### Policy engine
+
+The policy engine runs **locally** after every scan. It blocks if any of these conditions are true:
+
+| Condition | Controlled by |
+|---|---|
+| `security_score` < minimum | `MCPHUB_MIN_SCORE` / `MCPHUB_SKILL_MIN_SCORE` |
+| `risk_level` > maximum | `MCPHUB_MAX_RISK` / `MCPHUB_SKILL_MAX_RISK` |
+| Any detected capability is in the deny list | `MCPHUB_DENIED_CAPABILITIES` (MCP only) |
+| Critical findings detected when max risk is `low` or below | `MCPHUB_MAX_RISK` |
+
+When blocked, the response includes `allowed: false`, a human-readable `reason`, and `blocked_by_policy` with the list of violations.
+
+Risk levels are ordered: `safe = none < low < medium < high < critical`.
+
+### Why MCPs and Skills have separate thresholds
+
+The MCP server scanner and the Skill scanner are different analyzers with different scoring scales and sensitivity levels. Skills get **slightly more permissive defaults** (`min_score: 70`, `max_risk: medium`) because the skill analyzer is purpose-built for SKILL.md structure and has fewer false positives than the general-purpose MCP scanner. You can tighten skill policy independently of MCP policy.
+
+### Credits
+
+| Operation | Cost |
+|---|---|
+| New scan (MCP or Skill, new commit) | **5 credits** |
+| Cached scan (same commit SHA already scanned) | **0 credits** |
+| `get_verdict`, `get_scan_result`, `get_skill_scan` | **0 credits** |
+
+---
+
 ## Available tools
 
 ### MCP server tools
