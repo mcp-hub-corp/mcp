@@ -15,6 +15,7 @@ dev = [
 
 [project.scripts]
 mcp-hub-security = "server:main"
+mcp-hub-skill-watchdog = "hooks.skill_watchdog:main"
 
 [build-system]
 requires = ["hatchling"]

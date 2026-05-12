@@ -60,52 +60,50 @@ It detects **14 vulnerability classes** including:
 
 ## Quick install
 
-```bash
-# Clone and install deps
-git clone https://github.com/mcp-hub-corp/mcp.git mcp-hub-security
-cd mcp-hub-security
-pip install fastmcp
-```
+No installation needed. All configs below use `uvx` — it fetches and runs the server automatically on first use.
 
-Get your API key at [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/) → **API Tokens** tab.
+**The only thing you need:** an API key → **[mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/)** → API Tokens tab.
 
 ---
 
 ## MCP client configuration
 
-> **Recommended:** Claude Code is the only client that supports the full setup — MCP server + proactive Skill watchdog hook. Other clients get the security tools but not the automatic scanning on write.
+> **Before you start:** get your API key at **[mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/)** → API Tokens. You will need to replace `YOUR_API_KEY` in the configs below — that is the **only** thing you need to change.
 
 <details>
-<summary><strong>Claude Code ⭐ Full setup with watchdog (recommended)</strong></summary>
+<summary><strong>Claude Code ⭐ recommended — MCP server + Skill watchdog</strong></summary>
 
-Claude Code supports both the MCP server and the **proactive Skill watchdog hook** — the hook automatically scans any `SKILL.md` you write or edit and blocks unsafe skills before they run.
+Claude Code is the only client with **full support**: the MCP tools for on-demand scanning AND the **proactive Skill watchdog** that automatically scans any `SKILL.md` you write or edit.
 
-**Step 1 — MCP server**
+---
 
-Add to `~/.claude/mcp.json` (global) or `.mcp.json` in your project root:
+**1. Get your API key**
+
+👉 [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/) → API Tokens → Create token. Copy the key.
+
+---
+
+**2. Add the MCP server** — paste into `~/.claude/mcp.json` (global) or `.mcp.json` in your project:
 
 ```json
 {
   "mcpServers": {
     "mcp-hub-security": {
-      "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
       "env": {
-        "MCPHUB_API_KEY": "your_api_key_here",
-        "MCPHUB_MIN_SCORE": "80",
-        "MCPHUB_MAX_RISK": "low",
-        "MCPHUB_SKILL_MIN_SCORE": "70",
-        "MCPHUB_SKILL_MAX_RISK": "medium",
-        "MCPHUB_DENIED_CAPABILITIES": "file_write,process_exec,secret_access"
+        "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
     }
   }
 }
 ```
 
-**Step 2 — Skill watchdog hook**
+Replace `YOUR_API_KEY` with your key. That's it for the MCP server.
 
-Add to `~/.claude/settings.json` (global) or `.claude/settings.json` (project):
+---
+
+**3. Add the Skill watchdog** — paste into `~/.claude/settings.json` (global) or `.claude/settings.json` (project):
 
 ```json
 {
@@ -116,7 +114,7 @@ Add to `~/.claude/settings.json` (global) or `.claude/settings.json` (project):
         "hooks": [
           {
             "type": "command",
-            "command": "MCPHUB_API_KEY=your_api_key_here MCPHUB_SKILL_MIN_SCORE=70 MCPHUB_SKILL_MAX_RISK=medium python /absolute/path/to/mcp-hub-security/hooks/skill_watchdog.py"
+            "command": "MCPHUB_API_KEY=YOUR_API_KEY uvx --from git+https://github.com/mcp-hub-corp/mcp.git mcp-hub-skill-watchdog"
           }
         ]
       }
@@ -125,19 +123,25 @@ Add to `~/.claude/settings.json` (global) or `.claude/settings.json` (project):
 }
 ```
 
-**How the watchdog works:**
+Replace `YOUR_API_KEY` with the same key. The watchdog runs automatically — no other config needed.
 
-After every `Write` or `Edit` tool call, the hook checks if the file is a Claude Code Skill (frontmatter with `name:` + `description:`). If it is, it scans it immediately and emits a verdict:
+---
 
-- ✅ **Safe** → brief notice with score and risk level, no interruption.
-- 🚫 **Blocked** → error message listing the policy violations. Claude Code stops and shows why.
+**What the watchdog does:**
 
-Run `claude` — both the server and hook are active immediately.
+Every time Claude writes or edits a `.md` file that looks like a skill (`name:` + `description:` frontmatter), the watchdog scans it immediately and shows the verdict:
+
+- ✅ **Safe** — brief notice with score and risk, no interruption.
+- 🚫 **Blocked** — error with the exact policy violation. Claude Code stops.
+
+Run `claude` — both the server and watchdog are active.
 
 </details>
 
 <details>
 <summary><strong>Claude Desktop</strong></summary>
+
+> 🔑 **Get your API key first:** [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/) → API Tokens. Replace `YOUR_API_KEY` below.
 
 Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
 
@@ -145,55 +149,48 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 {
   "mcpServers": {
     "mcp-hub-security": {
-      "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
       "env": {
-        "MCPHUB_API_KEY": "your_api_key_here",
-        "MCPHUB_MIN_SCORE": "80",
-        "MCPHUB_MAX_RISK": "low",
-        "MCPHUB_SKILL_MIN_SCORE": "70",
-        "MCPHUB_SKILL_MAX_RISK": "medium",
-        "MCPHUB_DENIED_CAPABILITIES": "file_write,process_exec,secret_access"
+        "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
     }
   }
 }
 ```
 
-Restart Claude Desktop after saving. Note: Claude Desktop does not support hooks — the proactive Skill watchdog is not available here.
+Restart Claude Desktop. Note: the proactive Skill watchdog is not available in Claude Desktop (no hooks support).
 
 </details>
 
 <details>
 <summary><strong>VS Code (GitHub Copilot)</strong></summary>
 
-Add to `.vscode/mcp.json` in your workspace, or to `~/.vscode/mcp.json` globally:
+> 🔑 **Get your API key first:** [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/) → API Tokens. Replace `YOUR_API_KEY` below.
+
+Add to `.vscode/mcp.json` in your workspace (or `~/.vscode/mcp.json` globally):
 
 ```json
 {
   "servers": {
     "mcp-hub-security": {
       "type": "stdio",
-      "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
       "env": {
-        "MCPHUB_API_KEY": "your_api_key_here",
-        "MCPHUB_MIN_SCORE": "80",
-        "MCPHUB_MAX_RISK": "low",
-        "MCPHUB_SKILL_MIN_SCORE": "70",
-        "MCPHUB_SKILL_MAX_RISK": "medium"
+        "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
     }
   }
 }
 ```
 
-Note: VS Code does not support Claude Code hooks — the proactive Skill watchdog is not available here.
-
 </details>
 
 <details>
 <summary><strong>Cursor</strong></summary>
+
+> 🔑 **Get your API key first:** [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/) → API Tokens. Replace `YOUR_API_KEY` below.
 
 Add to `~/.cursor/mcp.json`:
 
@@ -201,14 +198,10 @@ Add to `~/.cursor/mcp.json`:
 {
   "mcpServers": {
     "mcp-hub-security": {
-      "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
       "env": {
-        "MCPHUB_API_KEY": "your_api_key_here",
-        "MCPHUB_MIN_SCORE": "80",
-        "MCPHUB_MAX_RISK": "low",
-        "MCPHUB_SKILL_MIN_SCORE": "70",
-        "MCPHUB_SKILL_MAX_RISK": "medium"
+        "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
     }
   }
@@ -222,20 +215,18 @@ Restart Cursor after saving.
 <details>
 <summary><strong>Windsurf</strong></summary>
 
+> 🔑 **Get your API key first:** [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/) → API Tokens. Replace `YOUR_API_KEY` below.
+
 Add to `~/.windsurf/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "mcp-hub-security": {
-      "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
       "env": {
-        "MCPHUB_API_KEY": "your_api_key_here",
-        "MCPHUB_MIN_SCORE": "80",
-        "MCPHUB_MAX_RISK": "low",
-        "MCPHUB_SKILL_MIN_SCORE": "70",
-        "MCPHUB_SKILL_MAX_RISK": "medium"
+        "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
     }
   }
@@ -247,19 +238,19 @@ Add to `~/.windsurf/mcp.json`:
 <details>
 <summary><strong>Zed</strong></summary>
 
-Add to `~/.config/zed/settings.json` under the `"context_servers"` key:
+> 🔑 **Get your API key first:** [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/) → API Tokens. Replace `YOUR_API_KEY` below.
+
+Add to `~/.config/zed/settings.json` under `"context_servers"`:
 
 ```json
 {
   "context_servers": {
     "mcp-hub-security": {
       "command": {
-        "path": "python",
-        "args": ["/absolute/path/to/mcp-hub-security/server.py"],
+        "path": "uvx",
+        "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
         "env": {
-          "MCPHUB_API_KEY": "your_api_key_here",
-          "MCPHUB_MIN_SCORE": "80",
-          "MCPHUB_MAX_RISK": "low"
+          "MCPHUB_API_KEY": "YOUR_API_KEY"
         }
       }
     }
@@ -272,6 +263,8 @@ Add to `~/.config/zed/settings.json` under the `"context_servers"` key:
 <details>
 <summary><strong>Continue.dev</strong></summary>
 
+> 🔑 **Get your API key first:** [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/) → API Tokens. Replace `YOUR_API_KEY` below.
+
 Add to `.continue/config.json`:
 
 ```json
@@ -279,12 +272,10 @@ Add to `.continue/config.json`:
   "mcpServers": [
     {
       "name": "mcp-hub-security",
-      "command": "python",
-      "args": ["/absolute/path/to/mcp-hub-security/server.py"],
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
       "env": {
-        "MCPHUB_API_KEY": "your_api_key_here",
-        "MCPHUB_MIN_SCORE": "80",
-        "MCPHUB_MAX_RISK": "low"
+        "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
     }
   ]
