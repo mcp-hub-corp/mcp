@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import Any
 
-from config import get_skill_config
-from http_client import api_request
-from policy import apply_skill_policy
+from mcp_hub_security.config import get_skill_config
+from mcp_hub_security.http_client import api_request
+from mcp_hub_security.policy import apply_skill_policy
 
 
 def _build_skill_response(result: dict[str, Any], cfg) -> dict[str, Any]:

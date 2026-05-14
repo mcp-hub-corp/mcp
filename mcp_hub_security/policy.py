@@ -1,5 +1,5 @@
 from __future__ import annotations
-from config import MCPConfig, SkillConfig
+from mcp_hub_security.config import MCPConfig, SkillConfig
 
 RISK_ORDER: dict[str, int] = {"safe": 0, "none": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
 

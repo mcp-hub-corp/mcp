@@ -2,9 +2,9 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from config import get_mcp_config
-from http_client import api_request
-from policy import apply_mcp_policy
+from mcp_hub_security.config import get_mcp_config
+from mcp_hub_security.http_client import api_request
+from mcp_hub_security.policy import apply_mcp_policy
 
 
 def _extract_check_token(resp: dict[str, Any]) -> str:

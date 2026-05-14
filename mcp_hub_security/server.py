@@ -21,8 +21,17 @@ from __future__ import annotations
 
 from fastmcp import FastMCP
 
-from tools.mcp import check_mcp_safety, get_credit_balance, get_scan_result, get_verdict
-from tools.skill import check_skill_safety, check_skill_safety_url, get_skill_scan
+from mcp_hub_security.tools.mcp import (
+    check_mcp_safety,
+    get_credit_balance,
+    get_scan_result,
+    get_verdict,
+)
+from mcp_hub_security.tools.skill import (
+    check_skill_safety,
+    check_skill_safety_url,
+    get_skill_scan,
+)
 
 mcp = FastMCP(
     "MCP Hub Security",
