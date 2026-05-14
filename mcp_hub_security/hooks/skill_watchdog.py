@@ -25,12 +25,57 @@ import sys
 import urllib.error
 import urllib.request
 
+from mcp_hub_security.config import (
+    ALLOWED_RISK_LEVELS,
+    DEFAULT_API_URL,
+    ConfigError,
+)
 from mcp_hub_security.policy import RISK_ORDER as _RISK_ORDER
 
-_API_KEY = os.environ.get("MCPHUB_API_KEY", "")
-_API_URL = os.environ.get("MCPHUB_API_URL", "https://api.mcp-hub.info/api/v1").rstrip("/")
-_MIN_SCORE = int(os.environ.get("MCPHUB_SKILL_MIN_SCORE", "70"))
-_MAX_RISK = os.environ.get("MCPHUB_SKILL_MAX_RISK", "medium")
+
+def _env(name: str, default: str) -> str:
+    """Same semantics as config._env_str — empty-string falls back to default."""
+    value = os.environ.get(name)
+    if value is None or value == "":
+        return default
+    return value
+
+
+def _load_env() -> None:
+    """Read env vars into module-level state.
+
+    Called once at module import and re-callable for tests that override
+    env vars between cases.
+    """
+    global _API_KEY, _API_URL, _MIN_SCORE, _MAX_RISK
+    _API_KEY = os.environ.get("MCPHUB_API_KEY", "")
+    _API_URL = _env("MCPHUB_API_URL", DEFAULT_API_URL).rstrip("/")
+    raw_min_score = _env("MCPHUB_SKILL_MIN_SCORE", "70")
+    try:
+        _MIN_SCORE = int(raw_min_score)
+    except ValueError as exc:
+        raise ConfigError(
+            f"MCPHUB_SKILL_MIN_SCORE must be an integer, got {raw_min_score!r}"
+        ) from exc
+    _MAX_RISK = _env("MCPHUB_SKILL_MAX_RISK", "medium").strip().lower()
+    if _MAX_RISK not in ALLOWED_RISK_LEVELS:
+        allowed = ", ".join(ALLOWED_RISK_LEVELS)
+        raise ConfigError(
+            f"MCPHUB_SKILL_MAX_RISK must be one of: {allowed}; got {_MAX_RISK!r}"
+        )
+
+
+_API_KEY = ""
+_API_URL = DEFAULT_API_URL
+_MIN_SCORE = 70
+_MAX_RISK = "medium"
+
+try:
+    _load_env()
+except ConfigError:
+    # Defer config errors to main() so `import mcp_hub_security.hooks.skill_watchdog`
+    # never crashes (importability is a contract surfaced by tests/test_imports.py).
+    pass
 
 _SKILL_RE = re.compile(
     r"^---\s*\n(?:[^\n]*\n)*?name:\s*\S[^\n]*\n(?:[^\n]*\n)*?description:\s*\S[^\n]*",
@@ -63,6 +108,14 @@ def _emit(msg_type: str, message: str) -> None:
 
 
 def main() -> None:
+    # Re-read env in case the process was launched with vars set after the
+    # initial import (rare, but tests rely on this behavior via reload).
+    try:
+        _load_env()
+    except ConfigError as exc:
+        sys.stderr.write(f"ERROR: {exc}\n")
+        sys.exit(2)
+
     if not _API_KEY:
         sys.exit(0)
 
