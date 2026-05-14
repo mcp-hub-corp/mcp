@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Build wheel
+        run: |
+          rm -rf dist
+          uv build
+
+      - name: Verify wheel contents
+        run: |
+          set -euo pipefail
+          WHEEL="$(ls dist/mcp_hub_security-*.whl)"
+          echo "Inspecting $WHEEL"
+          unzip -l "$WHEEL"
+          # 9+ .py files expected (10 after split into tools/+hooks/+top-level)
+          count="$(unzip -l "$WHEEL" | grep -c '\.py$')"
+          test "$count" -ge 9 || { echo "Expected >= 9 .py files in wheel, got $count" >&2; exit 1; }
+          # Entry points must point at qualified module paths
+          unzip -p "$WHEEL" mcp_hub_security-*.dist-info/entry_points.txt \
+            | tee /tmp/entry_points.txt
+          grep -q "mcp_hub_security.server:main" /tmp/entry_points.txt
+          grep -q "mcp_hub_security.hooks.skill_watchdog:main" /tmp/entry_points.txt
+
+      - name: Install wheel into isolated venv
+        run: |
+          uv venv .venv-ci --python ${{ matrix.python-version }}
+          VIRTUAL_ENV=$PWD/.venv-ci uv pip install dist/mcp_hub_security-*.whl
+          VIRTUAL_ENV=$PWD/.venv-ci uv pip install pytest pytest-mock
+
+      - name: Smoke test entry points
+        run: |
+          set -euo pipefail
+          .venv-ci/bin/mcp-hub-security --version
+          MCPHUB_API_KEY=test .venv-ci/bin/mcp-hub-security --health
+
+      - name: Smoke test mcp-hub-security boots without ModuleNotFoundError
+        run: |
+          set +e
+          out="$(MCPHUB_API_KEY=test timeout 3 .venv-ci/bin/mcp-hub-security < /dev/null 2>&1)"
+          code=$?
+          echo "$out"
+          # Timeout 124 or graceful EOF 0 are both acceptable.
+          if [ "$code" != "0" ] && [ "$code" != "124" ]; then
+            echo "Unexpected exit code: $code" >&2
+            exit 1
+          fi
+          if echo "$out" | grep -q ModuleNotFoundError; then
+            echo "REGRESSION: ModuleNotFoundError leaked into stderr" >&2
+            exit 1
+          fi
+
+      - name: Run pytest (unit + smoke + handshake)
+        run: |
+          .venv-ci/bin/python -m pytest -v
