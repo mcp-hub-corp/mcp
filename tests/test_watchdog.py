@@ -6,7 +6,7 @@ from unittest.mock import mock_open, patch
 
 import pytest
 
-import hooks.skill_watchdog as wdog
+import mcp_hub_security.hooks.skill_watchdog as wdog
 
 
 SKILL_CONTENT = """---
@@ -44,7 +44,7 @@ def _run(hook_input, file_content, api_result, monkeypatch, extra_env=None):
 
     with patch("sys.stdin", StringIO(json.dumps(hook_input))), \
          patch("builtins.open", mock_open(read_data=file_content)), \
-         patch("hooks.skill_watchdog._api_scan", return_value=api_result), \
+         patch("mcp_hub_security.hooks.skill_watchdog._api_scan", return_value=api_result), \
          patch("builtins.print", side_effect=fake_print):
         try:
             wdog.main()
@@ -106,6 +106,25 @@ def test_non_md_file_skipped(monkeypatch):
 
 def test_edit_tool_also_triggers(monkeypatch):
     code, resp = _run(HOOK_EDIT, SKILL_CONTENT, _safe(), monkeypatch)
+    assert code == 0
+    assert resp.get("type") == "info"
+
+
+def test_safe_risk_level_with_default_max_medium_exits_zero(monkeypatch):
+    """Regression: watchdog must accept risk_level='safe' (SkillScan's best level).
+
+    Before the fix, _RISK_ORDER was missing the "safe" key, so risk_level="safe"
+    fell back to 99 and exceeded the default MCPHUB_SKILL_MAX_RISK=medium,
+    blocking every clean skill with exit code 1.
+    """
+    api_result = {
+        "score": 10.0,
+        "risk_level": "safe",
+        "has_critical": False,
+        "finding_count": 0,
+        "scan_id": "safe-scan-001",
+    }
+    code, resp = _run(HOOK_WRITE, SKILL_CONTENT, api_result, monkeypatch)
     assert code == 0
     assert resp.get("type") == "info"
 

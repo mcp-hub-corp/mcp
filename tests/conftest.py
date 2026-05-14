@@ -1,29 +1,34 @@
 from __future__ import annotations
+import os
+
 import pytest
 
 
-@pytest.fixture
-def mcp_verdict():
-    return {
-        "security_score": 90,
-        "risk_level": "low",
-        "capabilities": [],
-        "owasp_risks": [],
-        "findings_summary": {"critical": 0, "high": 0, "medium": 0, "low": 0, "total": 0},
-        "findings": [],
-        "credits_consumed": 5,
-        "credits_remaining": 275,
-    }
+_MCPHUB_ENV_VARS = (
+    "MCPHUB_API_KEY",
+    "MCPHUB_API_URL",
+    "MCPHUB_MIN_SCORE",
+    "MCPHUB_MAX_RISK",
+    "MCPHUB_DENIED_CAPABILITIES",
+    "MCPHUB_POLL_INTERVAL",
+    "MCPHUB_POLL_TIMEOUT",
+    "MCPHUB_SKILL_MIN_SCORE",
+    "MCPHUB_SKILL_MAX_RISK",
+)
 
 
-@pytest.fixture
-def skill_result():
-    return {
-        "scan_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-        "skill_name": "test-skill",
-        "risk_level": "low",
-        "score": 9.0,
-        "finding_count": 0,
-        "has_critical": False,
-        "findings": [],
-    }
+@pytest.fixture(autouse=True)
+def _clean_mcphub_env(monkeypatch):
+    """Strip every MCPHUB_* env var inherited from the host before each test.
+
+    Without this, a developer who has `MCPHUB_API_KEY` exported in their shell
+    silently changes test behavior (especially `importlib.reload(wdog)` style
+    watchdog tests). Each test that needs an env var sets it explicitly.
+    """
+    for name in _MCPHUB_ENV_VARS:
+        monkeypatch.delenv(name, raising=False)
+    # Also strip anything else with the MCPHUB_ prefix the caller might rely on.
+    for name in list(os.environ):
+        if name.startswith("MCPHUB_") and name not in _MCPHUB_ENV_VARS:
+            monkeypatch.delenv(name, raising=False)
+    yield

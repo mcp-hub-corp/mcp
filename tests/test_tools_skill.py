@@ -2,7 +2,7 @@ from __future__ import annotations
 from unittest.mock import patch
 import pytest
 
-from tools.skill import check_skill_safety, check_skill_safety_url, get_skill_scan
+from mcp_hub_security.tools.skill import check_skill_safety, check_skill_safety_url, get_skill_scan
 
 
 SKILL_MD = """---
@@ -35,25 +35,25 @@ def _result(score=9.0, risk="low", has_critical=False, finding_count=0):
 
 class TestCheckSkillSafety:
     def test_happy_path_allowed(self):
-        with patch("tools.skill.api_request", return_value=_result()):
+        with patch("mcp_hub_security.tools.skill.api_request", return_value=_result()):
             result = check_skill_safety(SKILL_MD)
         assert result["allowed"] is True
         assert result["score"] == 9.0
         assert result["scan_id"] == "aaaa-bbbb-cccc-dddd"
 
     def test_blocked_by_low_score(self):
-        with patch("tools.skill.api_request", return_value=_result(score=6.5)):
+        with patch("mcp_hub_security.tools.skill.api_request", return_value=_result(score=6.5)):
             result = check_skill_safety(SKILL_MD)
         assert result["allowed"] is False
         assert any("65" in r for r in result["blocked_by_policy"])
 
     def test_blocked_by_high_risk(self):
-        with patch("tools.skill.api_request", return_value=_result(risk="high")):
+        with patch("mcp_hub_security.tools.skill.api_request", return_value=_result(risk="high")):
             result = check_skill_safety(SKILL_MD)
         assert result["allowed"] is False
 
     def test_blocked_by_critical_finding(self):
-        with patch("tools.skill.api_request", return_value=_result(has_critical=True)):
+        with patch("mcp_hub_security.tools.skill.api_request", return_value=_result(has_critical=True)):
             result = check_skill_safety(SKILL_MD)
         assert result["allowed"] is False
 
@@ -62,7 +62,7 @@ class TestCheckSkillSafety:
         def capture(method, path, body, *, api_key, api_url, **kw):
             captured.append(body)
             return _result()
-        with patch("tools.skill.api_request", side_effect=capture):
+        with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):
             check_skill_safety(SKILL_MD)
         assert captured[0]["skill_name"] == "unnamed"
 
@@ -71,7 +71,7 @@ class TestCheckSkillSafety:
         def capture(method, path, body, *, api_key, api_url, **kw):
             captured.append(body)
             return _result()
-        with patch("tools.skill.api_request", side_effect=capture):
+        with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):
             check_skill_safety(SKILL_MD, skill_name="my-skill")
         assert captured[0]["skill_name"] == "my-skill"
 
@@ -80,24 +80,24 @@ class TestCheckSkillSafety:
         def capture(method, path, body, *, api_key, api_url, **kw):
             captured.append(body)
             return _result()
-        with patch("tools.skill.api_request", side_effect=capture):
+        with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):
             check_skill_safety(SKILL_MD)
         assert captured[0]["enable_ml"] is False
 
     def test_api_error_propagates(self):
-        with patch("tools.skill.api_request", side_effect=RuntimeError("API error 500: error")):
+        with patch("mcp_hub_security.tools.skill.api_request", side_effect=RuntimeError("API error 500: error")):
             with pytest.raises(RuntimeError, match="API error"):
                 check_skill_safety(SKILL_MD)
 
 
 class TestCheckSkillSafetyUrl:
     def test_happy_path(self):
-        with patch("tools.skill.api_request", return_value=_result()):
+        with patch("mcp_hub_security.tools.skill.api_request", return_value=_result()):
             result = check_skill_safety_url("https://raw.githubusercontent.com/org/repo/main/skill.md")
         assert result["allowed"] is True
 
     def test_blocked_by_risk(self):
-        with patch("tools.skill.api_request", return_value=_result(risk="critical")):
+        with patch("mcp_hub_security.tools.skill.api_request", return_value=_result(risk="critical")):
             result = check_skill_safety_url("https://raw.githubusercontent.com/org/repo/main/skill.md")
         assert result["allowed"] is False
 
@@ -106,13 +106,13 @@ class TestCheckSkillSafetyUrl:
         def capture(method, path, body, *, api_key, api_url, **kw):
             captured.append(body)
             return _result()
-        with patch("tools.skill.api_request", side_effect=capture):
+        with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):
             check_skill_safety_url("https://example.com/skill.md", skill_name="remote")
         assert captured[0]["url"] == "https://example.com/skill.md"
         assert captured[0]["skill_name"] == "remote"
 
     def test_api_400_propagates(self):
-        with patch("tools.skill.api_request", side_effect=RuntimeError("API error 400: URL not allowed")):
+        with patch("mcp_hub_security.tools.skill.api_request", side_effect=RuntimeError("API error 400: URL not allowed")):
             with pytest.raises(RuntimeError, match="400"):
                 check_skill_safety_url("https://example.com/skill.md")
 
@@ -120,7 +120,7 @@ class TestCheckSkillSafetyUrl:
 class TestGetSkillScan:
     def test_returns_raw_api_response(self):
         raw = {"scan_id": "x", "score": 8.0, "findings": []}
-        with patch("tools.skill.api_request", return_value=raw):
+        with patch("mcp_hub_security.tools.skill.api_request", return_value=raw):
             result = get_skill_scan("skill-uuid-001")
         assert result == raw
 
@@ -129,6 +129,6 @@ class TestGetSkillScan:
         def capture(method, path, body, *, api_key, api_url, **kw):
             captured.append(path)
             return {}
-        with patch("tools.skill.api_request", side_effect=capture):
+        with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):
             get_skill_scan("my-uuid")
         assert captured[0] == "/skill-scan/my-uuid/"

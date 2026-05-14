@@ -1,6 +1,6 @@
 from __future__ import annotations
 import pytest
-from config import MCPConfig, SkillConfig, get_mcp_config, get_skill_config
+from mcp_hub_security.config import MCPConfig, SkillConfig, get_mcp_config, get_skill_config
 
 
 def _clear(monkeypatch, *names):

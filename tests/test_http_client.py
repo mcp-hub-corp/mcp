@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from http_client import api_request
+from mcp_hub_security.http_client import api_request
 
 
 def _make_response(data: dict):

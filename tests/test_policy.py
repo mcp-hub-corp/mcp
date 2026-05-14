@@ -1,7 +1,7 @@
 from __future__ import annotations
 import pytest
-from config import MCPConfig, SkillConfig
-from policy import RISK_ORDER, apply_mcp_policy, apply_skill_policy
+from mcp_hub_security.config import MCPConfig, SkillConfig
+from mcp_hub_security.policy import RISK_ORDER, apply_mcp_policy, apply_skill_policy
 
 
 @pytest.fixture
