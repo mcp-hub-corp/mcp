@@ -22,7 +22,6 @@ import json
 import os
 import re
 import sys
-import urllib.error
 import urllib.request
 
 from mcp_hub_security.config import (

@@ -1,10 +1,7 @@
 from __future__ import annotations
 import json
-import sys
 from io import StringIO
 from unittest.mock import mock_open, patch
-
-import pytest
 
 import mcp_hub_security.hooks.skill_watchdog as wdog
 
@@ -37,9 +34,8 @@ def _run(hook_input, file_content, api_result, monkeypatch, extra_env=None):
     importlib.reload(wdog)
 
     captured = []
-    orig_print = print
 
-    def fake_print(data, **kw):
+    def fake_print(data, **_kw):
         captured.append(data)
 
     with patch("sys.stdin", StringIO(json.dumps(hook_input))), \
@@ -83,7 +79,7 @@ def test_safe_skill_exits_zero(monkeypatch):
 
 
 def test_non_skill_file_exits_zero(monkeypatch):
-    code, resp = _run(HOOK_WRITE, NON_SKILL_CONTENT, _safe(), monkeypatch)
+    code, _resp = _run(HOOK_WRITE, NON_SKILL_CONTENT, _safe(), monkeypatch)
     assert code == 0
 
 

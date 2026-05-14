@@ -28,7 +28,7 @@ def test_get_request_returns_parsed_json():
 def test_request_sets_bearer_auth():
     captured = []
 
-    def fake_urlopen(req, timeout):
+    def fake_urlopen(req, **_kw):
         captured.append(req)
         return _make_response({})
 
@@ -60,7 +60,7 @@ def test_http_error_raises_runtime_error():
 def test_post_request_sends_json_body():
     captured = []
 
-    def fake_urlopen(req, timeout):
+    def fake_urlopen(req, **_kw):
         captured.append(req)
         return _make_response({"ok": True})
 

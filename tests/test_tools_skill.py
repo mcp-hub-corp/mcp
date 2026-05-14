@@ -59,7 +59,8 @@ class TestCheckSkillSafety:
 
     def test_default_skill_name_sent_as_unnamed(self):
         captured = []
-        def capture(method, path, body, *, api_key, api_url, **kw):
+        def capture(_method, _path, body, *, api_key, api_url, **_kw):
+            del api_key, api_url
             captured.append(body)
             return _result()
         with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):
@@ -68,7 +69,8 @@ class TestCheckSkillSafety:
 
     def test_custom_skill_name_passed_through(self):
         captured = []
-        def capture(method, path, body, *, api_key, api_url, **kw):
+        def capture(_method, _path, body, *, api_key, api_url, **_kw):
+            del api_key, api_url
             captured.append(body)
             return _result()
         with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):
@@ -77,7 +79,8 @@ class TestCheckSkillSafety:
 
     def test_enable_ml_is_always_false(self):
         captured = []
-        def capture(method, path, body, *, api_key, api_url, **kw):
+        def capture(_method, _path, body, *, api_key, api_url, **_kw):
+            del api_key, api_url
             captured.append(body)
             return _result()
         with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):
@@ -103,7 +106,8 @@ class TestCheckSkillSafetyUrl:
 
     def test_url_sent_in_request_body(self):
         captured = []
-        def capture(method, path, body, *, api_key, api_url, **kw):
+        def capture(_method, _path, body, *, api_key, api_url, **_kw):
+            del api_key, api_url
             captured.append(body)
             return _result()
         with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):
@@ -126,7 +130,8 @@ class TestGetSkillScan:
 
     def test_calls_correct_path(self):
         captured = []
-        def capture(method, path, body, *, api_key, api_url, **kw):
+        def capture(_method, path, _body, *, api_key, api_url, **_kw):
+            del api_key, api_url
             captured.append(path)
             return {}
         with patch("mcp_hub_security.tools.skill.api_request", side_effect=capture):

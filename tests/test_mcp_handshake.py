@@ -66,6 +66,8 @@ def installed_entry(tmp_path_factory):
 
 
 def _send_jsonrpc(proc: subprocess.Popen, payload: dict) -> dict:
+    assert proc.stdin is not None, "Popen was created with stdin=PIPE"
+    assert proc.stdout is not None, "Popen was created with stdout=PIPE"
     proc.stdin.write((json.dumps(payload) + "\n").encode())
     proc.stdin.flush()
     # Read lines from stdout until we get a JSON object with matching id.
@@ -115,6 +117,7 @@ def test_mcp_initialize_and_tools_list(installed_entry):
         )
 
         # Per MCP spec, send notifications/initialized before listing tools.
+        assert proc.stdin is not None
         proc.stdin.write(
             (json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n").encode()
         )
@@ -133,7 +136,8 @@ def test_mcp_initialize_and_tools_list(installed_entry):
         assert len(tool_names) == 7, f"expected exactly 7 tools, got {len(tool_names)}: {tool_names}"
     finally:
         try:
-            proc.stdin.close()
+            if proc.stdin is not None:
+                proc.stdin.close()
         except Exception:
             pass
         try:
