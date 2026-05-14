@@ -24,5 +24,15 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["mcp_hub_security"]
 
+[tool.hatch.build.targets.sdist]
+exclude = [
+    ".quality-loop",
+    ".quality-loop/**",
+    ".github",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -5,6 +5,23 @@ Newest entry first.
 
 ## [2.0.1] — 2026-05-15
 
+### Fixed (iter 2 — QA findings)
+
+- **README path corrected**: `~/.claude/mcp.json` (does not exist) replaced
+  with `~/.claude.json` so users following the global-config instructions
+  land on the real Claude Code config file.
+- **`.mcp.json` aligned with README snippet**: removed redundant
+  `MCPHUB_MIN_SCORE` / `MCPHUB_MAX_RISK` env vars (defaults — README itself
+  advises not to set them) and unified the placeholder to `YOUR_API_KEY`.
+- **sdist no longer leaks `.quality-loop/`**: added
+  `[tool.hatch.build.targets.sdist] exclude = [".quality-loop", ...]` to
+  `pyproject.toml` and ignored the directory in `.gitignore`. Rebuild
+  `dist/` to drop the 15 internal post-mortem markdown files that were
+  shipping inside the source tarball.
+- **LICENSE file added**: canonical MIT text with `Copyright (c) 2026 MCP
+  Hub Corp`. The README MIT badge link now resolves; wheel METADATA picks
+  up the license declaration.
+
 ### Fixed
 
 - **Customer outage**: `uvx --from git+... mcp-hub-security` failed with

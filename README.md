@@ -84,7 +84,7 @@ Claude Code is the only client with **full support**: the MCP tools for on-deman
 
 ---
 
-**2. Add the MCP server** — paste into `~/.claude/mcp.json` (global) or `.mcp.json` in your project:
+**2. Add the MCP server** — paste into `~/.claude.json` (global) or `.mcp.json` in your project:
 
 ```json
 {
