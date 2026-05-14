@@ -25,12 +25,12 @@ import sys
 import urllib.error
 import urllib.request
 
+from mcp_hub_security.policy import RISK_ORDER as _RISK_ORDER
+
 _API_KEY = os.environ.get("MCPHUB_API_KEY", "")
 _API_URL = os.environ.get("MCPHUB_API_URL", "https://api.mcp-hub.info/api/v1").rstrip("/")
 _MIN_SCORE = int(os.environ.get("MCPHUB_SKILL_MIN_SCORE", "70"))
 _MAX_RISK = os.environ.get("MCPHUB_SKILL_MAX_RISK", "medium")
-
-_RISK_ORDER: dict[str, int] = {"none": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
 
 _SKILL_RE = re.compile(
     r"^---\s*\n(?:[^\n]*\n)*?name:\s*\S[^\n]*\n(?:[^\n]*\n)*?description:\s*\S[^\n]*",
