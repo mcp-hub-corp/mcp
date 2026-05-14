@@ -4,7 +4,7 @@
   <p><strong>Security gate for MCP servers and Claude Code Skills.</strong><br/>
   Scan any Git repository or <code>SKILL.md</code> against 14+ vulnerability classes before trusting it.</p>
 
-  [![PyPI](https://img.shields.io/pypi/v/mcp-hub-security?color=%23ff6b4a&label=mcp-hub-security)](https://pypi.org/project/mcp-hub-security/)
+  [![Version](https://img.shields.io/badge/version-2.0.1-ff6b4a)](https://github.com/mcp-hub-corp/mcp/releases/tag/v2.0.1)
   [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
   [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
   [![MCP Hub](https://img.shields.io/badge/powered%20by-mcp--hub.info-ff6b4a)](https://mcp-hub.info)
@@ -26,6 +26,7 @@
 - [Environment variables](#environment-variables)
 - [Available tools](#available-tools)
 - [Examples](#examples)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -54,7 +55,7 @@ It detects **14 vulnerability classes** including:
 - **Policy engine** — configure minimum score, maximum risk level, and denied capabilities via environment variables. The server enforces policy and returns `allowed: true/false` with clear reasons.
 - **Proactive watchdog hook** — a Claude Code `PostToolUse` hook that automatically scans any `SKILL.md` you create or edit and warns you immediately.
 - **Credit-aware** — each scan costs 5 credits; cached results (same commit SHA) are free. Balance is always returned.
-- **Zero dependencies** — server uses Python stdlib HTTP only. No `httpx`, no `requests`.
+- **Zero install steps** — `uvx` fetches and runs the server on first use; no virtualenv to manage. The server itself talks to the API with the Python stdlib (no `httpx`/`requests`); the only runtime dependency is `fastmcp`.
 
 ---
 
@@ -90,7 +91,7 @@ Claude Code is the only client with **full support**: the MCP tools for on-deman
   "mcpServers": {
     "mcp-hub-security": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1", "mcp-hub-security"],
       "env": {
         "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
@@ -114,7 +115,10 @@ Replace `YOUR_API_KEY` with your key. That's it for the MCP server.
         "hooks": [
           {
             "type": "command",
-            "command": "MCPHUB_API_KEY=YOUR_API_KEY uvx --from git+https://github.com/mcp-hub-corp/mcp.git mcp-hub-skill-watchdog"
+            "command": "uvx --from git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1 mcp-hub-skill-watchdog",
+            "env": {
+              "MCPHUB_API_KEY": "YOUR_API_KEY"
+            }
           }
         ]
       }
@@ -123,7 +127,7 @@ Replace `YOUR_API_KEY` with your key. That's it for the MCP server.
 }
 ```
 
-Replace `YOUR_API_KEY` with the same key. The watchdog runs automatically — no other config needed.
+Replace `YOUR_API_KEY` with the same key. Putting the key in the `env` block avoids quoting bugs and keeps it out of the shell process list. The watchdog runs automatically — no other config needed.
 
 ---
 
@@ -150,7 +154,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
   "mcpServers": {
     "mcp-hub-security": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1", "mcp-hub-security"],
       "env": {
         "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
@@ -176,7 +180,7 @@ Add to `.vscode/mcp.json` in your workspace (or `~/.vscode/mcp.json` globally):
     "mcp-hub-security": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1", "mcp-hub-security"],
       "env": {
         "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
@@ -199,7 +203,7 @@ Add to `~/.cursor/mcp.json`:
   "mcpServers": {
     "mcp-hub-security": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1", "mcp-hub-security"],
       "env": {
         "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
@@ -224,7 +228,7 @@ Add to `~/.windsurf/mcp.json`:
   "mcpServers": {
     "mcp-hub-security": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1", "mcp-hub-security"],
       "env": {
         "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
@@ -248,7 +252,7 @@ Add to `~/.config/zed/settings.json` under `"context_servers"`:
     "mcp-hub-security": {
       "command": {
         "path": "uvx",
-        "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
+        "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1", "mcp-hub-security"],
         "env": {
           "MCPHUB_API_KEY": "YOUR_API_KEY"
         }
@@ -273,7 +277,7 @@ Add to `.continue/config.json`:
     {
       "name": "mcp-hub-security",
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git", "mcp-hub-security"],
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1", "mcp-hub-security"],
       "env": {
         "MCPHUB_API_KEY": "YOUR_API_KEY"
       }
@@ -308,6 +312,8 @@ Add to `.continue/config.json`:
 | `MCPHUB_SKILL_MAX_RISK` | no | `medium` | Maximum skill risk level: `none` \| `low` \| `medium` \| `high` \| `critical` |
 
 > Skills use a tighter analyzer (17 analyzers, 61 rules) that is separate from the MCP server scanner. Using different thresholds for each is intentional.
+
+> **Optional vars:** if you do not want to override a default, **omit the variable entirely**. Do not set it to the empty string. (The server normalizes `""` to the default, but some MCP clients refuse to forward empty-string `env` entries at all, leading to confusing behavior.)
 
 ---
 
@@ -442,8 +448,57 @@ get_credit_balance()
 
 ---
 
+## Troubleshooting
+
+### Claude Code says "Failed to connect"
+
+That four-word message is everything Claude Code shows by default when an MCP server fails to start. The real error is captured in a debug file but you have to ask for it.
+
+**Step 1 — run a health check yourself.** From your terminal, run the same command Claude Code runs, but skip stdio and just print the diagnostic table:
+
+```bash
+MCPHUB_API_KEY=your-key uvx --from git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1 mcp-hub-security --health
+```
+
+This prints every `MCPHUB_*` env var the server sees, validates them, and ends with `status: OK` or `status: UNHEALTHY`. Exit code 0 means the server can start; exit code 2 means a config problem (missing API key, invalid risk level, malformed URL).
+
+**Step 2 — capture the full stderr.** Start Claude Code with `--debug-file=/tmp/claude.log`:
+
+```bash
+claude --debug-file=/tmp/claude.log
+```
+
+Then `tail -f /tmp/claude.log` to see every stderr line from every MCP server — including the actual exception that Claude Code is hiding.
+
+**Step 3 — for Claude Desktop**, logs go to `~/Library/Logs/Claude/mcp-server-mcp-hub-security.log` on macOS.
+
+### `ModuleNotFoundError` or stale uvx cache
+
+If you ran an older version once, `uvx` may have a broken wheel cached. Force a fresh fetch:
+
+```bash
+uv cache clean mcp-hub-security
+```
+
+Then re-run the original `uvx --from git+...@v2.0.1 …` command — it will resolve the pinned tag again.
+
+### `MCPHUB_API_KEY is required`
+
+The server now fail-fasts when the API key is missing instead of silently breaking. Set it in the `env` block of your MCP config (not inline on the command). Get a key at [mcp-hub.info/accounts/dashboard/](https://mcp-hub.info/accounts/dashboard/).
+
+> **Heads-up on empty strings:** for any *optional* `MCPHUB_*` variable, leave it out entirely instead of setting it to `""`. Empty strings are normalized to the default, but tooling that round-trips JSON may interpret them inconsistently.
+
+### What version am I running?
+
+```bash
+uvx --from git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1 mcp-hub-security --version
+# → mcp-hub-security 2.0.1
+```
+
+---
+
 <div align="center">
-  <a href="https://mcp-hub.info">mcp-hub.info</a> · 
-  <a href="https://mcp-hub.info/accounts/dashboard/">Get API key</a> · 
+  <a href="https://mcp-hub.info">mcp-hub.info</a> ·
+  <a href="https://mcp-hub.info/accounts/dashboard/">Get API key</a> ·
   <a href="https://mcp-hub.info/owasp/">OWASP MCP Top 10</a>
 </div>

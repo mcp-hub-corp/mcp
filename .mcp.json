@@ -1,13 +1,12 @@
 {
   "mcpServers": {
     "mcp-hub-security": {
-      "command": "python",
-      "args": ["server.py"],
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/mcp-hub-corp/mcp.git@v2.0.1", "mcp-hub-security"],
       "env": {
         "MCPHUB_API_KEY": "YOUR_API_KEY_HERE",
         "MCPHUB_MIN_SCORE": "80",
-        "MCPHUB_MAX_RISK": "low",
-        "MCPHUB_DENIED_CAPABILITIES": ""
+        "MCPHUB_MAX_RISK": "low"
       }
     }
   }
