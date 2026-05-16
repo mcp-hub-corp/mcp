@@ -3,6 +3,72 @@
 All notable changes to `mcp-hub-security` are documented here.
 Newest entry first.
 
+## [Unreleased] — 2026-05-16
+
+### Added
+
+- **Wire-contract schema validation** (`mcp_hub_security/validators.py`):
+  every API response is now validated against
+  `mcp_hub_security/schemas/scan_result.schema.json` (Draft 2020-12). Unknown
+  `risk_level` values, missing required fields, or non-object payloads are
+  rejected before any policy decision (fail-CLOSED to `critical`).
+- **`MCPHUB_FAIL_MODE` env var** (`mcp_hub_security/fail_mode.py`): controls
+  what the watchdog does when the hub is unreachable or the response is
+  malformed.
+  - `open` (default, backward compatible) — emit warning, allow tool call
+    (exit 0).
+  - `closed` — emit error, block tool call (exit 2). Recommended for
+    regulated / production deployments.
+  - `cached` — look up SHA-256(content) in a local cache file
+    (`$MCPHUB_CACHE_DIR`, default `~/.cache/mcp-hub-security/verdicts.json`)
+    and reuse the previous verdict. Cache miss falls through to `closed`.
+- **`MCPHUB_CERT_FINGERPRINT_SHA256` env var**: optional public-key pinning
+  for the hub TLS leaf certificate. Defensive layer on top of standard CA
+  validation; useful in high-assurance environments.
+- New tests: `tests/test_validators.py` (13), `tests/test_fail_mode.py` (12),
+  `tests/test_hub_contract.py` (4 — contract check between bundled schema
+  and the hub's canonical copy).
+
+### Changed
+
+- **Bundled schema in wheel**: the `scan_result.schema.json` file is now
+  shipped at `mcp_hub_security/schemas/` via
+  `[tool.hatch.build.targets.wheel.force-include]` so the client never
+  fetches it over the network.
+- `mcp_hub_security.tools.mcp.check_mcp_safety` / `get_verdict` and
+  `mcp_hub_security.tools.skill.check_skill_safety*` now pass
+  `validate_schema=True` to `api_request`, so contract violations surface
+  immediately as `RuntimeError("hub contract violation: …")`.
+- `RISK_ORDER` policy already accepted `safe` (since v2.0.0); the
+  `critical_blocked` decision now also treats `safe` as "block critical
+  findings" (alignment with `none` / `low` semantics).
+- `apply_mcp_policy` and `apply_skill_policy` consider `safe` an even
+  stricter aliasing of `none` when deciding to flag critical findings.
+
+### Fixed
+
+- **B4-001** — Unknown `risk_level` no longer falls through to
+  `RISK_ORDER.get(level, 99)` ambiguity; the watchdog now fails-CLOSED
+  (treats unknown values as `critical`) before policy evaluation.
+- **M4-002** — Hub asymmetry between `risk_level="none"` (legacy MCP path)
+  and `risk_level="safe"` (SkillScan) resolved: client refuses `"none"` and
+  hub now emits `"safe"` for perfect scores. The watchdog refuses any value
+  outside the canonical enum (`safe|low|medium|high|critical`).
+- **M4-023** — `mcp_hub_security/hooks/skill_watchdog.py:147-151`
+  catch-all `sys.exit(0)` replaced with the configurable fail-mode helper
+  so high-trust deployments can block on hub failure instead of silently
+  allowing.
+
+### Security
+
+- **M3-062** — Draft 2020-12 wire contract published as
+  `scan_result.schema.json`. Schema drift between hub and client now fails
+  CI via `tests/test_hub_contract.py` (cross-repo comparison) before
+  reaching customers.
+- **M4-019** — HTTPS requests now use an explicit
+  `ssl.create_default_context()` (no implicit disable path) and gain
+  optional fingerprint pinning via `MCPHUB_CERT_FINGERPRINT_SHA256`.
+
 ## [2.0.1] — 2026-05-15
 
 ### Fixed (iter 2 — QA findings)

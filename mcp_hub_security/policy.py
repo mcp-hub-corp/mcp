@@ -23,7 +23,7 @@ def apply_mcp_policy(verdict: dict, cfg: MCPConfig) -> tuple[bool, list[str]]:
         if cap in cfg.denied_capabilities:
             blocked.append(f"Denied capability detected: {cap}")
 
-    if critical_count > 0 and cfg.max_risk in ("none", "low"):
+    if critical_count > 0 and cfg.max_risk in ("safe", "none", "low"):
         if not any("critical" in r.lower() for r in blocked):
             blocked.append(f"{critical_count} critical finding(s) detected")
 
@@ -48,7 +48,7 @@ def apply_skill_policy(result: dict, cfg: SkillConfig) -> tuple[bool, list[str]]
     if RISK_ORDER.get(risk_level, 99) > RISK_ORDER.get(cfg.max_risk, 1):
         blocked.append(f"Risk level '{risk_level}' exceeds maximum '{cfg.max_risk}'")
 
-    if has_critical and cfg.max_risk in ("none", "low", "medium"):
+    if has_critical and cfg.max_risk in ("safe", "none", "low", "medium"):
         if not any("critical" in r.lower() for r in blocked):
             blocked.append("Critical security findings detected")
 

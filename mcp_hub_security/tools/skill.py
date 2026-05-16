@@ -58,6 +58,7 @@ def check_skill_safety(content: str, skill_name: str = "unnamed") -> dict[str, A
         "POST", "/skill-scan/",
         {"content": content, "skill_name": skill_name, "enable_ml": False},
         api_key=cfg.api_key, api_url=cfg.api_url,
+        validate_schema=True,
     )
     return _build_skill_response(result, cfg)
 
@@ -77,6 +78,7 @@ def check_skill_safety_url(url: str, skill_name: str = "unnamed") -> dict[str, A
         "POST", "/skill-scan/url/",
         {"url": url, "skill_name": skill_name, "enable_ml": False},
         api_key=cfg.api_key, api_url=cfg.api_url,
+        validate_schema=True,
     )
     return _build_skill_response(result, cfg)
 

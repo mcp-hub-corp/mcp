@@ -303,6 +303,9 @@ Add to `.continue/config.json`:
 | `MCPHUB_DENIED_CAPABILITIES` | no | *(none)* | Comma-separated capabilities to always block. E.g. `file_write,process_exec,secret_access,code_eval,env_access,db_access,network_egress` |
 | `MCPHUB_POLL_INTERVAL` | no | `2` | Seconds between status polls while scan is running |
 | `MCPHUB_POLL_TIMEOUT` | no | `300` | Maximum seconds to wait for a scan result |
+| `MCPHUB_FAIL_MODE` | no | `open` | What happens when the hub is unreachable / returns a malformed response: `open` (warn + allow, backward compatible), `closed` (block tool / hook, exit 2), `cached` (reuse last verdict for the same content hash; fall back to `closed` on cache miss). |
+| `MCPHUB_CACHE_DIR` | no | `~/.cache/mcp-hub-security` | Where cached verdicts are stored for `MCPHUB_FAIL_MODE=cached`. |
+| `MCPHUB_CERT_FINGERPRINT_SHA256` | no | *(unset)* | When set, pins the hub TLS leaf certificate to this SHA-256 fingerprint (hex, optional `:` separators). Adds an extra TLS handshake per request — only enable in high-assurance deployments. |
 
 ### Skills
 

@@ -53,11 +53,25 @@ def _run(hook_input, file_content, api_result, monkeypatch, extra_env=None):
 
 
 def _safe(score=9.0, risk="low"):
-    return {"score": score, "risk_level": risk, "has_critical": False, "finding_count": 0, "scan_id": "x"}
+    return {
+        "schema_version": "2.0.0",
+        "score": score,
+        "risk_level": risk,
+        "has_critical": False,
+        "finding_count": 0,
+        "scan_id": "x",
+    }
 
 
 def _critical():
-    return {"score": 3.0, "risk_level": "critical", "has_critical": True, "finding_count": 5, "scan_id": "y"}
+    return {
+        "schema_version": "2.0.0",
+        "score": 3.0,
+        "risk_level": "critical",
+        "has_critical": True,
+        "finding_count": 5,
+        "scan_id": "y",
+    }
 
 
 def test_is_skill_detects_valid_frontmatter():
@@ -114,6 +128,7 @@ def test_safe_risk_level_with_default_max_medium_exits_zero(monkeypatch):
     blocking every clean skill with exit code 1.
     """
     api_result = {
+        "schema_version": "2.0.0",
         "score": 10.0,
         "risk_level": "safe",
         "has_critical": False,
@@ -123,6 +138,94 @@ def test_safe_risk_level_with_default_max_medium_exits_zero(monkeypatch):
     code, resp = _run(HOOK_WRITE, SKILL_CONTENT, api_result, monkeypatch)
     assert code == 0
     assert resp.get("type") == "info"
+
+
+def test_unknown_risk_level_fails_closed(monkeypatch):
+    """B4-001: an unknown ``risk_level`` value must fail-CLOSED (treat as critical).
+
+    Schema validation rejects the payload before policy is evaluated, so the
+    watchdog exits 2 (malformed response) instead of silently allowing.
+    """
+    bogus = {
+        "schema_version": "2.0.0",
+        "score": 10.0,
+        "risk_level": "unknown",
+        "has_critical": False,
+        "finding_count": 0,
+        "scan_id": "z",
+    }
+    code, resp = _run(HOOK_WRITE, SKILL_CONTENT, bogus, monkeypatch)
+    assert code == 2
+    assert resp.get("type") == "error"
+
+
+def test_legacy_none_risk_level_rejected(monkeypatch):
+    """M4-002: hub no longer emits "none"; watchdog must refuse it."""
+    legacy = {
+        "schema_version": "2.0.0",
+        "score": 10.0,
+        "risk_level": "none",
+        "has_critical": False,
+        "finding_count": 0,
+        "scan_id": "z",
+    }
+    code, _ = _run(HOOK_WRITE, SKILL_CONTENT, legacy, monkeypatch)
+    assert code == 2
+
+
+def test_api_failure_fail_open_default(monkeypatch):
+    """M4-023: default fail-mode is open → API exception exits 0 with warning."""
+    monkeypatch.setenv("MCPHUB_API_KEY", "test-key")
+    monkeypatch.setenv("MCPHUB_SKILL_MIN_SCORE", "70")
+    monkeypatch.setenv("MCPHUB_SKILL_MAX_RISK", "medium")
+    monkeypatch.delenv("MCPHUB_FAIL_MODE", raising=False)
+
+    import importlib
+    importlib.reload(wdog)
+
+    captured = []
+    with patch("sys.stdin", StringIO(json.dumps(HOOK_WRITE))), \
+         patch("builtins.open", mock_open(read_data=SKILL_CONTENT)), \
+         patch(
+             "mcp_hub_security.hooks.skill_watchdog._api_scan",
+             side_effect=ConnectionError("hub unreachable"),
+         ), \
+         patch("builtins.print", side_effect=lambda d, **_: captured.append(d)):
+        try:
+            wdog.main()
+            code = 0
+        except SystemExit as e:
+            code = e.code
+
+    assert code == 0
+    msg = json.loads(captured[0])
+    assert msg["type"] == "warning"
+
+
+def test_api_failure_fail_closed(monkeypatch):
+    """M4-023: MCPHUB_FAIL_MODE=closed → API exception exits 2."""
+    monkeypatch.setenv("MCPHUB_API_KEY", "test-key")
+    monkeypatch.setenv("MCPHUB_SKILL_MIN_SCORE", "70")
+    monkeypatch.setenv("MCPHUB_SKILL_MAX_RISK", "medium")
+    monkeypatch.setenv("MCPHUB_FAIL_MODE", "closed")
+
+    import importlib
+    importlib.reload(wdog)
+
+    with patch("sys.stdin", StringIO(json.dumps(HOOK_WRITE))), \
+         patch("builtins.open", mock_open(read_data=SKILL_CONTENT)), \
+         patch(
+             "mcp_hub_security.hooks.skill_watchdog._api_scan",
+             side_effect=ConnectionError("hub unreachable"),
+         ), \
+         patch("builtins.print"):
+        try:
+            wdog.main()
+            code = 0
+        except SystemExit as e:
+            code = e.code
+
+    assert code == 2
 
 
 def test_no_api_key_exits_zero(monkeypatch):

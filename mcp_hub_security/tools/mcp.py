@@ -115,6 +115,7 @@ def check_mcp_safety(url: str) -> dict[str, Any]:
     verdict = api_request(
         "GET", f"/scans/{scan_id}/verdict/",
         api_key=cfg.api_key, api_url=cfg.api_url,
+        validate_schema=True,
     )
     return _build_mcp_response(verdict, scan_id, cfg)
 
@@ -132,6 +133,7 @@ def get_verdict(scan_id: str) -> dict[str, Any]:
     verdict = api_request(
         "GET", f"/scans/{scan_id}/verdict/",
         api_key=cfg.api_key, api_url=cfg.api_url,
+        validate_schema=True,
     )
     return _build_mcp_response(verdict, scan_id, cfg)
 

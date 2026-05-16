@@ -29,7 +29,15 @@ from mcp_hub_security.config import (
     DEFAULT_API_URL,
     ConfigError,
 )
+from mcp_hub_security.fail_mode import fail as _fail
+from mcp_hub_security.fail_mode import hash_content as _hash_content
+from mcp_hub_security.fail_mode import cache_put as _cache_put
 from mcp_hub_security.policy import RISK_ORDER as _RISK_ORDER
+from mcp_hub_security.validators import (
+    FAIL_CLOSED_RISK,
+    SchemaValidationError,
+    validate_scan_response,
+)
 
 
 def _env(name: str, default: str) -> str:
@@ -141,23 +149,47 @@ def main() -> None:
         sys.exit(0)
 
     skill_name = os.path.splitext(os.path.basename(file_path))[0]
+    content_sha = _hash_content(content)
 
     try:
         result = _api_scan(content, skill_name)
     except Exception as exc:
-        _emit("warning", f"MCP Hub: skill scan failed for '{skill_name}': {exc}")
-        sys.exit(0)
+        # M4-023: route through configurable fail-mode (open/closed/cached)
+        # instead of unconditionally exit(0). Backward-compatible default is
+        # ``open`` so existing installs keep working.
+        _fail(
+            f"skill scan failed for '{skill_name}': {exc}",
+            content_sha256=content_sha,
+            on_cache_hit=lambda v: 0 if v.get("allowed", False) else 1,
+        )
+        return  # unreachable — _fail always exits
+
+    # M3-062 + M4-002 + B4-001: validate against the wire contract. An
+    # unknown/missing risk_level is treated as ``critical`` (most restrictive).
+    try:
+        validate_scan_response(result)
+    except SchemaValidationError as exc:
+        _emit(
+            "error",
+            f"MCP Hub Security: hub returned malformed response for '{skill_name}': {exc}",
+        )
+        sys.exit(2)
 
     raw_score: float = result.get("score", 0.0)
     score_100: int = round(raw_score * 10)
-    risk_level: str = result.get("risk_level", "unknown")
+    # B4-001: any value outside the schema enum has already been rejected by
+    # validate_scan_response, but we defensively re-check here so a future
+    # schema relaxation cannot silently regress.
+    risk_level: str = result.get("risk_level", FAIL_CLOSED_RISK)
+    if risk_level not in ALLOWED_RISK_LEVELS:
+        risk_level = FAIL_CLOSED_RISK
     has_critical: bool = result.get("has_critical", False)
     finding_count: int = result.get("finding_count", 0)
     scan_id: str = result.get("scan_id", "")
 
     score_too_low = score_100 < _MIN_SCORE
-    risk_too_high = _RISK_ORDER.get(risk_level, 99) > _RISK_ORDER.get(_MAX_RISK, 2)
-    critical_blocked = has_critical and _MAX_RISK in ("none", "low", "medium")
+    risk_too_high = _RISK_ORDER.get(risk_level, _RISK_ORDER[FAIL_CLOSED_RISK]) > _RISK_ORDER.get(_MAX_RISK, 2)
+    critical_blocked = has_critical and _MAX_RISK in ("safe", "none", "low", "medium")
 
     if score_too_low or risk_too_high or critical_blocked:
         reasons: list[str] = []
@@ -176,8 +208,30 @@ def main() -> None:
         if scan_id:
             message += f" Review: https://mcp-hub.info/skill-scan/result/{scan_id}/"
 
+        # Persist block-verdict for offline ``cached`` fail-mode.
+        _cache_put(
+            content_sha,
+            {
+                "allowed": False,
+                "score_100": score_100,
+                "risk_level": risk_level,
+                "skill_name": skill_name,
+            },
+        )
+
         _emit("error", message)
         sys.exit(1)
+
+    # Persist allow-verdict for offline ``cached`` fail-mode.
+    _cache_put(
+        content_sha,
+        {
+            "allowed": True,
+            "score_100": score_100,
+            "risk_level": risk_level,
+            "skill_name": skill_name,
+        },
+    )
 
     _emit(
         "info",
