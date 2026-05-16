@@ -114,7 +114,18 @@ def fail(
     """
     mode = get_fail_mode()
 
-    if mode == "cached" and content_sha256:
+    if mode == "cached":
+        if not content_sha256:
+            # BUG-W3-001 fix: no sha means we cannot consult the cache.
+            # Fail-CLOSED instead of silently falling through to fail-OPEN —
+            # otherwise we'd bypass the security model whenever the caller
+            # forgets to pass the hash.
+            _emit(
+                "error",
+                f"MCP Hub Security: hub unreachable ({reason}) and no content "
+                "hash to consult cache; blocking (fail-closed).",
+            )
+            sys.exit(2)
         cached = cache_get(content_sha256)
         if cached is not None:
             _emit(

@@ -69,18 +69,6 @@ def test_whitespace_only_env_var_defaults_to_open(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "BUG (Wave 3 Tester finding): `cached` mode without content_sha256 "
-        "silently falls through to fail-OPEN (exit 0) — bypasses the security "
-        "model entirely. Expected behavior: fail-closed (exit 2) when cache "
-        "cannot be consulted. See mcp_hub_security/fail_mode.py:117 — the "
-        "guard `if mode == \"cached\" and content_sha256:` skips the cached "
-        "branch when sha is None, dropping straight into the default `open` "
-        "tail at line 140."
-    ),
-)
 def test_cached_mode_without_content_sha_falls_through_to_closed(monkeypatch, tmp_cache):
     """If `cached` is set but caller passes no content_sha256, behavior SHOULD
     be fail-closed (exit 2). Otherwise we'd silently allow when we don't have

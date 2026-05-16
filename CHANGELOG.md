@@ -5,6 +5,17 @@ Newest entry first.
 
 ## [Unreleased] — 2026-05-16
 
+### Fixed
+
+- **BUG-W3-001 (P1, fail-OPEN bypass in cached mode)** — when
+  `MCPHUB_FAIL_MODE=cached` and the caller does not pass `content_sha256`,
+  the guard `if mode == "cached" and content_sha256:` silently dropped into
+  the default `open` tail, exiting 0 (allow) instead of blocking. Security
+  model bypass: a malformed call could bypass cached-mode enforcement.
+  Fix: cached mode without a content hash now fail-CLOSEDs (exit 2). Removed
+  `@pytest.mark.xfail(strict=True)` from
+  `tests/test_fail_mode_edge.py::test_cached_mode_without_content_sha_falls_through_to_closed`.
+
 ### Added
 
 - **Wire-contract schema validation** (`mcp_hub_security/validators.py`):
