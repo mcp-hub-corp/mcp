@@ -8,10 +8,18 @@ import urllib.request
 from typing import Any
 from urllib.parse import urlparse
 
+from mcp_hub_security import __version__ as _PKG_VERSION
 from mcp_hub_security.validators import (
     SchemaValidationError,
     validate_scan_response,
 )
+
+
+# M4-025: identify the hub HTTP client to the API so the server side can
+# spot outdated watchdog versions, rate-limit per agent and produce
+# meaningful audit logs. Format follows RFC 9110 §10.1.5 (token/version
+# with optional comment).
+USER_AGENT = f"mcp-hub-security/{_PKG_VERSION} (+https://mcp-hub.info)"
 
 
 # M4-019: Optional public-key/cert pinning. Set
@@ -101,6 +109,10 @@ def api_request(
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
             "Accept": "application/json",
+            # M4-025: stamp the client identity on every request so the
+            # hub can correlate requests, rate-limit per agent and warn
+            # users running outdated watchdog versions.
+            "User-Agent": USER_AGENT,
         },
     )
     # Explicit default SSL context — never disable verification.

@@ -70,3 +70,26 @@ def test_post_request_sends_json_body():
 
     sent = json.loads(captured[0].data)
     assert sent == body
+
+
+def test_request_sets_user_agent_header():
+    """M4-025: every hub request must stamp a User-Agent so the API can
+    correlate per-agent activity, rate-limit and warn on outdated watchdog
+    versions. The header must include the package version.
+    """
+    from mcp_hub_security import __version__ as pkg_version
+    from mcp_hub_security.http_client import USER_AGENT
+
+    captured = []
+
+    def fake_urlopen(req, **_kw):
+        captured.append(req)
+        return _make_response({})
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        api_request("GET", "/path", api_key="k", api_url="https://api.example.com/v1")
+
+    sent_ua = captured[0].get_header("User-agent")
+    assert sent_ua == USER_AGENT
+    assert sent_ua.startswith("mcp-hub-security/")
+    assert pkg_version in sent_ua

@@ -3,6 +3,18 @@
 All notable changes to `mcp-hub-security` are documented here.
 Newest entry first.
 
+## [Unreleased] — 2026-05-18
+
+### Added
+
+- **M4-025 — User-Agent header on every hub request** —
+  `mcp_hub_security/http_client.py` now stamps
+  `User-Agent: mcp-hub-security/<version> (+https://mcp-hub.info)` on
+  every outbound API call. This lets the server side correlate
+  per-agent activity, rate-limit per agent, and surface warnings when
+  an outdated watchdog version is in use. Covered by a new test:
+  `tests/test_http_client.py::test_request_sets_user_agent_header`.
+
 ## [Unreleased] — 2026-05-16
 
 ### Fixed
